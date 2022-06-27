@@ -1,0 +1,167 @@
+{% extends "base/base2.html" %}
+{% block content %}
+{% load humanize %}
+{% load filter %}
+<style>
+    #paging{
+        width:250px;
+        margin:0 auto;
+        text-align: center;
+    }
+     #search_p, #search_l {
+        margin:0 0 0 120px;
+        display:inline-block;
+    }
+    tr, td, th{
+        border : 1px solid #dcdcdc;
+        width : 350px;
+        margin: 0 auto;
+    }
+    tr.m:hover{
+     background-color: #98bee0;
+     cursor:pointer;
+    }
+     .board {
+    min-width:700px;
+    }
+    @media screen and (max-width:768px) {
+    /*normal*/
+    .table-box {
+    overflow-x:auto;
+    }
+    #search_p, #search_l {
+        margin:0 auto;
+        display:inline-block;
+    }
+</style>
+
+<!--검색창 부분-->
+<div class="container">
+    <form action="{% url 'question:que_list' %}" method="GET" >
+        {% csrf_token %}
+        <div id="search_p">
+            <select name="search_sort" id="search_sort">
+                <option value="title" id="title">제목</option>
+                {% if login_session == 'insung' %}
+                <option value="cname" id="cname">업체명</option>
+                {% else %}
+                {% endif %}
+                <option value="type" id="type">유형</option>
+                <option value="content" id="content">내용</option>
+                <option value="all" id="all">전체</option>
+            </select>
+            <input type="search" placeholder="검색"  name="q" value="{{ query }}">
+            <button class="btn btn-secondary my-2 my-sm-0" type="submit"><i class="fas fa-search">검색</i></button>
+        </div>
+    </form>
+    <form action="{% url 'question:que_list' %}" method="GET" >
+        <div id="search_l">
+            <select name="search_sort" id="search_sort">
+                <option value="rg_date" id="rg_date">등록 일자</option>
+            </select>
+            <input type="text" placeholder="클릭하여 날짜 선택"  name="sdate" id="datepicker3">
+            <input type="text" placeholder="클릭하여 날짜 선택"  name="edate" id="datepicker4">
+            <button class="btn btn-secondary my-2 my-sm-0" type="submit"><i class="fas fa-search">검색</i></button>
+        </div>
+    </form>
+
+</div>
+
+<!--리스트 출력 부분-->
+<div class="table-box">
+    <table class="board">
+        <thead>
+
+        <tr class="header" style="text-align:center;">
+            <th style="width:5%;">순번</th>
+            <th style="width:8%">등록 일자</th>
+            <th style="width:8%">업체명</th>
+            <th style="width:10%">제목</th>
+            <th style="width:5%">유형</th>
+            <th style="width:15%">내용</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if page_obj %}
+        {% if login_session == 'insung' %}
+        {% for list in page_obj %}
+        <tr class="m" style="text-align:center;" onclick="location.href='{% url 'question:que_detail' list.no %}?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.number}}&sort={{sort}}&search_sort={{search_sort}}&sdate={{ sdate }}&edate={{ edate }}'">
+            <td>{{ page_obj.paginator.count|sub:page_obj.start_index|sub:forloop.counter0|add:1  }}</td>
+            <td>{{ list.rg_date|date:'Y-m-d' }}</td>
+            <td>{{ list.cname }}</td>
+            {% if list.comm %}
+            <td>{{ list.title }} <span style="color: red;">[{{ list.comm }}]</span></td>
+            {% else %}
+            <td>{{ list.title }}</td>
+            {% endif %}
+            <td>{{ list.type }}</td>
+            <td>{{ list.content | truncatewords:5}}</td>
+        </tr>
+        {% endfor %}
+        {% else  %}
+        {% for list in page_obj %}
+        <tr class="m" style="text-align:center;" onclick="location.href='{% url 'question:que_detail' list.no %}?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.number}}&sort={{sort}}&search_sort={{search_sort}}&sdate={{ sdate }}&edate={{ edate }}'">
+            <td>{{ page_obj.paginator.count|sub:page_obj.start_index|sub:forloop.counter0|add:1  }}</td>
+            <td>{{ list.rg_date|date:'Y-m-d' }}</td>
+            <td>{{ list.cname }}</td>
+            {% if list.comm %}
+            <td>{{ list.title }} <span style="color: red;">[{{ list.comm }}]</span></td>
+            {% else %}
+            <td>{{ list.title }} </td>
+            {% endif %}
+            <td>{{ list.type }}</td>
+            <td>{{ list.content | truncatewords:5}}</td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+        {% else %}
+        <tr>
+        <tr><h2>등록 된 글이 없습니다.</h2></tr>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+
+
+<!--페이징 부분-->
+<div class = "container" id="paging">
+    {#first previous#}
+    {% if page_obj.has_previous %}
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page=1&sort={{sort}}&search_sort={{search_sort}}&sdate={{ sdate }}&edate={{ edate }}">First</a>
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.previous_page_number}}&sort={{sort}}}&search_sort={{search_sort}}&sdate={{ sdate }}&edate={{ edate }}">Previous</a>
+    {% endif %}
+    {# 3of4 #}
+    <span>{{page_obj.number}}</span>
+    <span>of</span>
+    <span>{{page_obj.paginator.num_pages}}</span>
+    {# Next Last #}
+    {% if page_obj.has_next %}
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.next_page_number}}&sort={{sort}}}&search_sort={{search_sort}}&sdate={{ sdate }}&edate={{ edate }}">Next</a>
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.paginator.num_pages}}&sort={{sort}}}&search_sort={{search_sort}}&sdate={{ sdate }}&edate={{ edate }}">Last</a>
+    {%endif%}
+
+</div>
+<input type="button" class="btn btn-primary"  onclick="location.href='{% url 'question:que_insert' %}'" value="문의글 작성" style="float: right;">
+
+<!--정렬-->
+<div class="col-4">
+    <form method="GET" action="{% url 'question:que_list' %}">
+        <select name="sort" id="sort">
+            <option value="rg_date" id="rg_date">등록 일자</option>
+            <option value="cname" id="cname">업체명</option>
+            <option value="type" id="type">유형</option>
+            <option value="all" id="all">전체</option>
+        </select>
+        <button class="btn btn-primary" type="submit" value="">정렬</button>
+        <!--엑셀 다운로드-->
+
+    </form>
+</div>
+
+<br>
+<br>
+
+{% endblock %}

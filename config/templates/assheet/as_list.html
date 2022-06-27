@@ -1,0 +1,313 @@
+{% extends "base/base2.html" %}
+{% block content %}
+{% load humanize %}
+{% load filter %}
+<style>
+    #paging{
+        width:250px;
+        margin:0 auto;
+        text-align: center;
+    }
+    #search_p, #search_l {
+        margin:0 0 0 120px;
+        display:inline-block;
+    }
+    tr, td, th{
+        border : 1px solid #dcdcdc;
+        width : 350px;
+        margin: 0 auto;
+    }
+    tr.m:hover{
+     background-color: #98bee0;
+     cursor:pointer;
+    }
+    table {
+    text-align: center;
+    margin-left:auto;
+    margin-right:auto;
+    }
+    caption {
+    caption-side: top;
+    text-align: left;
+    font-weight : bold;
+    color : #2478FF;
+    font-size : 21px;
+    }
+    .board {
+    min-width:700px;
+    }
+    @media screen and (max-width:768px) {
+    /*normal*/
+    .table-box {
+    overflow-x:auto;
+    }
+    #fdiv{
+    min-width:350px;
+    }
+    @media screen and (max-width : 768px) {
+    #fdiv {
+    float : none;
+    width : 100%;
+    }
+     #search_p, #search_l {
+        margin:0 auto;
+        display:inline-block;
+    }
+
+
+</style>
+
+<!--검색창 부분-->
+<div class="container" >
+    <form action="{% url 'asregister:as_list' %}" method="GET">
+        {% csrf_token %}
+        <div id="search_p">
+            <select name="search_sort" id="search_sort">
+                <option value="product_name" id="product_name">제품명</option>
+                {% if login_session == 'insung' %}
+                <option value="cname" id="cname">업체명</option>
+                {% else %}
+                {% endif %}
+                <option value="serial" id="serial">전 시리얼</option>
+                <option value="after_serial" id="after_serial">후 시리얼</option>
+                <option value="cuser" id="cuser">요청자</option>
+                <option value="la_category" id="la_category">품목</option>
+                <option value="me_category" id="me_category">대분류</option>
+                <option value="sm_category" id="sm_category">소분류</option>
+                <option value="asaction" id="asaction">조치</option>
+                <option value="all" id="all">전체</option>
+            </select>
+            <input type="search" placeholder="검색"  name="q" value="{{ query }}">
+            <button class="btn btn-secondary my-2 my-sm-0" type="submit"><i class="fas fa-search">검색</i></button>
+        </div>
+    </form>
+    <form action="{% url 'asregister:as_list' %}" method="GET" >
+        <div id="search_l">
+            <select name="search_sort" id="search_sort">
+                <option value="rg_date" id="rg_date">접수 일자</option>
+                <option value="rp_date" id="rp_date">마감 요청 일자</option>
+                <option value="end_date" id="end_date">종료 일자</option>
+            </select>
+            <input type="text" placeholder="클릭하여 날짜 선택"  name="sdate" id="datepicker3" required>
+            <input type="text" placeholder="클릭하여 날짜 선택"  name="edate" id="datepicker4" required>
+            <button class="btn btn-secondary my-2 my-sm-0" type="submit"><i class="fas fa-search">검색</i></button>
+
+        </div>
+    </form>
+
+</div>
+<br>
+
+<!--회사 아이디 일때 리스트-->
+{% if login_session == 'insung' %}
+<div class="table-box">
+    <table class="board">
+        <thead>
+        {% if page_obj %}
+        <tr class="header" style="text-align:center;">
+            <th style="width:3%;">순번</th>
+            <th style="width:6%">업체명</th>
+            <th style="width:5%">요청자</th>
+            <th style="width:7%">접수 일자</th>
+            <th style="width:7%">마감 요청 일자</th>
+            <th style="width:7%">종료 일자</th>
+            <th style="width:15%">제품명</th>
+            <th style="width:6%">전 시리얼</th>
+            <th style="width:6%">후 시리얼</th>
+            <th style="width:6%">품목</th>
+            <th style="width:6%">대분류</th>
+            <th style="width:6%">소분류</th>
+            <th style="width:6%">조치</th>
+            <th style="width:5%">완료 여부</th>
+            <th style="width:4%">담당자</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for list in page_obj %}
+        <tr class="m" style="text-align:center;" onclick="location.href='{% url 'asregister:as_detail' list.no %}?q={{ query }}&page={{page_obj.number}}&sort={{sort}}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}'">
+            <td>{{ page_obj.paginator.count|sub:page_obj.start_index|sub:forloop.counter0|add:1  }}</td>
+            <td>{{ list.cname }}</td>
+            <td>{{ list.cuser }}</td>
+            <td>{{ list.rg_date|date:'Y-m-d' }}</td>
+            <td>{{ list.rp_date|date:'Y-m-d'   }}</td>
+            <td>{{ list.end_date|date:'Y-m-d'  }}</td>
+            <td>{{ list.product_name }}</td>
+            <td>{{ list.serial |default_if_none:"--" }}</td>
+            <td>{{ list.after_serial |default_if_none:"--" }}</td>
+            <td>{{ list.la_category |default_if_none:"--" }}</td>
+            <td>{{ list.me_category |default_if_none:"--" }}</td>
+            <td>{{ list.sm_category |default_if_none:"--" }}</td>
+            <td>{{ list.asaction |default_if_none:"--" }}</td>
+            <td>{{ list.finish|default_if_none:"--" }}</td>
+            <td>{{ list.user_name|default_if_none:"--" }}</td>
+        </tr>
+        {% endfor %}
+
+        {% else %}
+        <tr>
+        <tr><h2>등록 된 견적 글이 없습니다.</h2></tr>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+    <br>
+
+</div>
+<input type="button" class="btn btn-primary" onclick="location.href='{% url 'asregister:as_insert' %}'" value="AS접수" style="float:right;">
+<br>
+
+{% else %}
+<!--업체 아이디일때 리스트-->
+<div class="table-box">
+    <table class="board">
+        <thead>
+        {% if page_obj %}
+        <tr class="header" style="text-align:center;">
+            <th style="width:3%;">순번</th>
+            <th style="width:6%">업체명</th>
+            <th style="width:5%">요청자</th>
+            <th style="width:7%">접수 일자</th>
+            <th style="width:7%">마감 요청 일자</th>
+            <th style="width:7%">종료 일자</th>
+            <th style="width:15%">제품명</th>
+            <th style="width:6%">전 시리얼</th>
+            <th style="width:6%">후 시리얼</th>
+            <th style="width:6%">품목</th>
+            <th style="width:6%">대분류</th>
+            <th style="width:6%">소분류</th>
+            <th style="width:6%">조치</th>
+            <th style="width:5%">완료 여부</th>
+            <th style="width:4%">담당자</th>
+        </tr>
+        </thead>
+        <tbody>
+
+
+
+        {% for list in page_obj %}
+        {% if list.cname == login_session %}
+
+
+        <tr class="m" style="text-align:center;" onclick="location.href='{% url 'asregister:as_detail' list.no %}?q={{ query }}&page={{page_obj.number}}&sort={{sort}}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}'">
+            <td>{{ page_obj.paginator.count|sub:page_obj.start_index|sub:forloop.counter0|add:1  }}</td>
+            <td>{{ list.cname }}</td>
+            <td>{{ list.cuser }}</td>
+            <td>{{ list.rg_date|date:'Y-m-d' }}</td>
+            <td>{{ list.rp_date|date:'Y-m-d'  }}</td>
+            <td>{{ list.end_date|date:'Y-m-d'  }}</td>
+            <td>{{ list.product_name }}</td>
+            <td>{{ list.serial |default_if_none:"--" }}</td>
+            <td>{{ list.after_serial |default_if_none:"--" }}</td>
+            <td>{{ list.la_category |default_if_none:"--" }}</td>
+            <td>{{ list.me_category |default_if_none:"--" }}</td>
+            <td>{{ list.sm_category |default_if_none:"--" }}</td>
+            <td>{{ list.asaction |default_if_none:"--" }}</td>
+            <td>{{ list.finish|default_if_none:"--" }}</td>
+            <td>{{ list.user_name|default_if_none:"--" }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+
+        {% else %}
+        <tr>
+        <tr><h2>등록 된 글이 없습니다.</h2></tr>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+    <br>
+    <input type="button" class="btn btn-primary" onclick="location.href='{% url 'asregister:as_insert' %}'" value="AS접수" style="float:right;">
+</div>
+
+<br>
+{% endif %}
+
+<!--페이징 부분-->
+<div class = "container" id="paging">
+    {#first previous#}
+    {% if page_obj.has_previous %}
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page=1&sort={{sort}}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}">First</a>
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.previous_page_number}}&sort={{sort}}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}">Previous</a>
+    {% endif %}
+    {# 3of4 #}
+    <span>{{page_obj.number}}</span>
+    <span>of</span>
+    <span>{{page_obj.paginator.num_pages}}</span>
+    {# Next Last #}
+    {% if page_obj.has_next %}
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.next_page_number}}&sort={{sort}}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}">Next</a>
+    <a href="?q={{ query }}&page_obj={{ page_obj }}&page={{page_obj.paginator.num_pages}}&sort={{sort}}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}">Last</a>
+    {%endif%}
+</div>
+
+<!--정렬-->
+<div class="col-4">
+    <form method="GET" action="{% url 'asregister:as_list' %}">
+        <select name="sort" id="sort">
+            {% if login_session == 'insung' %}
+            <option value="cname" id="cname">업체명</option>
+            {% endif %}
+            <option value="rg_date" id="rg_date">접수 일자</option>
+            <option value="rp_date" id="rp_date">마감 요청 일자</option>
+            <option value="end_date" id="end_date">종료 일자</option>
+            <option value="product_name" id="product_name">제품명</option>
+            <option value="la_category" id="la_category">품목</option>
+            <option value="me_category" id="me_category">대분류</option>
+            <option value="sm_category" id="sm_category">소분류</option>
+            <option value="asaction" id="asaction">조치</option>
+            <option value="user_name" id="user_name">담당자</option>
+            <option value="finish" id="finish">완료 여부</option>
+            <option value="all" id="all">전체</option>
+        </select>
+        <button class="btn btn-primary" type="submit" value="">정렬</button>
+        <!--엑셀 다운로드-->
+        <a href="{% url 'asregister:AS_excel_openpyxl' %}?q={{ query }}&search_sort={{ search_sort }}&sdate={{ sdate }}&edate={{ edate }}" style="color:white"><button type="button" class="btn btn-primary">EXCEL DOWN</button></a>
+    </form>
+</div>
+
+
+
+<hr style="border: 1px;">
+
+{% if login_session == 'insung' %}
+<!--한달 이상 미처리 내역 -->
+<div class="table-box">
+    <table class="board">
+        <caption>한달 이상 미처리건 목록</caption>
+        <tr style="text-align:center;">
+            <th style="width:3%;">순번</th>
+            <th style="width:8%">업체명</th>
+            <th style="width:5%">요청자 성함</th>
+            <th style="width:5%">접수 일자</th>
+            <th style="width:6%">마감 요청 일자</th>
+            <th style="width:5%">종료 일자</th>
+            <th style="width:25%">제품명</th>
+            <th style="width:4%">수량</th>
+            <th style="width:15%">비고</th>
+            <th style="width:4%">완료 여부</th>
+        </tr>
+        {% for list in over_as reversed %}
+        <tr class="m" style="text-align:center;" onclick="location.href='{% url 'asregister:as_detail' list.no %}'">
+            <td>{{ forloop.counter }}</td>
+            <td>{{ list.cname }}</td>
+            <td>{{ list.cuser }}</td>
+            <td>{{ list.rg_date|date:'Y-m-d' }}</td>
+            {% if list.rp_date == None %}
+            <td> </td>
+            {% else %}
+            <td>{{ list.rp_date|date:'Y-m-d'  }}</td>
+            {% endif %}
+            <td>{{ list.end_date|date:'Y-m-d'  }}</td>
+            <td>{{ list.product_name }}</td>
+            <td>{{ list.quantity }}</td>
+            <td>{{ list.memo | truncatewords:10}}</td>
+            <td>{{ list.finish }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

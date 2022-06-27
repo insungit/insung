@@ -1,0 +1,68 @@
+{% extends "base/base2.html" %}
+{% block content %}
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+        * {
+            font-family: "Roboto";
+        }
+        body {
+            background-color: #F5F5F5;
+        }
+        form {
+            background-color: #FFFFFF;
+            padding: 25px;
+        }
+        table {
+            width: 100%;
+            text-align: center;
+            margin-top: 25px;
+            padding: 25px;
+            background-color: #FFFFFF;
+        }
+        table tr td {
+            padding-top: 15px;
+        }
+    </style>
+
+<script>
+     document.addEventListener('keydown', function(event) {
+        if (event.keyCode === 13) {
+            event.preventDefault();
+        };
+    }, true);
+
+</script>
+
+<body>
+    {% if login_session %}
+    <form action="{% url 'asregister:AsUploadFile' detailView.no %}" method="POST" enctype="multipart/form-data">
+        <input type="file" name="uploadedFile" multiple="multiple">
+        <input type="hidden" name="cname" value="{{ login_session }}">
+        <input type="hidden" name="menu" value="AS">
+        {% csrf_token %}
+        <input type="submit" value="Upload">
+        <input type="button" class="btn btn-primary" onclick="back();" value="뒤로가기" style="float: right;">
+    {% endif %}
+    </form>
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Upload Date & Time</th>
+            <th>Download</th>
+            <th>Delete</th>
+        </tr>
+
+     {% for file in files %}
+        {% if file.sheet_no_id == detailView.no  and file.cname == detailView.cname or file.sheet_no_id == detailView.no and file.cname == 'insung' %}
+            <tr>
+            <td>{{ file.title }}</td>
+            <td>{{ file.dateTimeOfUpload }}</td>
+            <td><a href="{% url 'asregister:as_downloadfile' file.no %}"><button class="btn btn-primary">DOWN</button></a></td>
+            <td><input type="button" class="btn btn-primary" onclick="location.href='{% url 'asregister:ASfile_delete' file.no %}'" value="Delete"></td>
+            </tr>
+        {% else %}
+        {% endif %}
+     {% endfor %}
+    </table>
+</body>
+{% endblock %}
