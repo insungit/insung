@@ -3,6 +3,7 @@ from .decorators import login_required, login_ok
 import sys
 
 sys.path.append('..')
+# 빨간줄 나타나지만 정상작동 / 표현만 저렇게 되는 것
 from asregister.models import ASsheet
 from question.models import question_sheet
 from .models import UploadFile, ProductDb, main_sheet, sub_sheet, product_info, notice, Product_Management
@@ -31,7 +32,7 @@ def index(request):
     user_phone = request.session.get('user_phone')
     user_name = request.session.get('user_name')
 
-    # 1일 기준 신규 접수 현황
+    # 당일 기준 신규 접수 현황
     es_count = main_sheet.objects.filter(rg_date__gte=date.today()).count()
     es_pcount = main_sheet.objects.filter(rg_date__gte=date.today(),
                                           cname=login_session).count()
@@ -94,6 +95,7 @@ def index(request):
     as_cnum_sum = ASsheet.objects.filter(rg_date__gte=date.today() - relativedelta(months=1)).values(
         'cname').order_by('cname').annotate(count=Count('cname')).aggregate(Sum('count'))
 
+    # 공지사항 리스트
     notice_list = notice.objects.all().order_by('-rg_date')
     page = request.GET.get('page', '1')
     paginator = Paginator(notice_list, 5)
@@ -115,7 +117,7 @@ def index(request):
     return render(request, 'isscm/index.html', context)
 
 
-# 제품명 검색 자동완성(사용하진 않고있음)
+# 제품명 검색 자동완성
 def searchData(request):
     if 'term' in request.GET:
         qs = ProductDb.objects.filter(product_name__icontains=request.GET.get('term'))
@@ -126,12 +128,12 @@ def searchData(request):
                 print(pname)
         else:
             print("없음")
-            n = '시리얼과 일치하는 제품명이 없습니다.'
+            n = '일치하는 제품명이 없습니다.'
             pname.append(n)
         return JsonResponse(pname, safe=False)
 
 
-# 제품명 검색 자동완성
+# 제품명 검색 자동완성(시리얼로 제품명 검색, 중복 제거)
 def searchPM(request):
     if 'term' in request.GET:
         qs = Product_Management.objects.filter(serial__icontains=request.GET.get('term')).exclude(status='폐기').values(
@@ -142,12 +144,6 @@ def searchPM(request):
         if qs:
             for product in qs:
                 n = product['product_name']
-                # s = product.serial
-                print("name : ", n)
-                # data = {
-                #     'name' : n,
-                #     'ser' : s
-                # }
                 pname.append(n)
         else:
             print("없음")
@@ -156,7 +152,7 @@ def searchPM(request):
         return JsonResponse(pname, safe=False)
 
 
-# 시리얼 검색
+# 시리얼 검색(중복제거)
 def searchPM_serial(request):
     if 'term' in request.GET:
         qs = Product_Management.objects.filter(serial__icontains=request.GET.get('term')).exclude(status='폐기').values(
@@ -167,13 +163,6 @@ def searchPM_serial(request):
         if qs:
             for product in qs:
                 n = product['serial']
-                print("n 은 : ", n)
-                # print("s 은 : ", s)
-                # s = product['serial']
-                # data = {
-                #     'name' : n,
-                #     'ser' : s
-                # }
                 p1.append(n)
         else:
             print("없음")
@@ -208,6 +197,7 @@ def main_insert(request):
 
         main.save()
 
+        # 값 넘길 필요없어 미사용
         context = {'login_session': login_session, 'user_name': user_name, 'user_dept': user_dept}
         print('메인 입력 끝남')
         return redirect('isscm:main_list')
@@ -231,20 +221,17 @@ def main_detail(request, pk):
     if request.method == 'GET':
         print('get 메인 디테일 뷰 시작')
         if sub_sheet.objects.filter(m_id_id=pk):
+
             sub = sub_sheet.objects.filter(m_id_id=pk).order_by('-rg_date')
-            # 페이징
+            # 목록으로 돌아갈때 페이지 정보 필요하여 넘김
             page = request.GET.get('page', '1')
-            paginator = Paginator(sub, 10)
-            page_obj = paginator.get_page(page)
             print("insung GET main 페이징 끝")
             try:
-                # upfile = UploadFile.objects.filter(sheet_no_id=pk)
-                # 잠시 보류
-                print('get 파일 있음')
+                # 업로드 파일 있을때 파일 갯수 넘김
                 upload_file = UploadFile.objects.filter(main_id_id=pk).count()
-                print('업로드 파일', upload_file)
                 context = {'detailView': detailView, 'login_session': login_session, 'user_name': user_name,
-                           'user_dept': user_dept, 'sub': sub, 'files': upload_file, 'sort': sort, 'query': query, 'search_sort': search_sort,
+                           'user_dept': user_dept, 'sub': sub, 'files': upload_file, 'sort': sort, 'query': query,
+                           'search_sort': search_sort,
                            'sdate': startdate, 'edate': enddate, 'page': page}
             except:
                 print('get 파일 없음')
@@ -255,8 +242,9 @@ def main_detail(request, pk):
             print('sub 없음')
             upload_file = UploadFile.objects.filter(main_id_id=pk).count()
             context = {'detailView': detailView, 'login_session': login_session, 'user_name': user_name,
-                       'user_dept': user_dept, 'files': upload_file, 'sort': sort, 'query': query, 'search_sort': search_sort,
-                           'sdate': startdate, 'edate': enddate, 'page': page}
+                       'user_dept': user_dept, 'files': upload_file, 'sort': sort, 'query': query,
+                       'search_sort': search_sort,
+                       'sdate': startdate, 'edate': enddate, 'page': page}
         print("디테일 뷰 끝")
         return render(request, 'isscm/main_detail.html', context)
     else:
@@ -329,8 +317,6 @@ def main_list(request):
                     m_sheet = main_sheet.objects.all().filter(requests__icontains=query).order_by('-rg_date')
                 elif search_sort == 'cname':
                     m_sheet = main_sheet.objects.all().filter(cname__icontains=query).order_by('-rg_date')
-                # elif search_sort == 'finish':
-                #     m_sheet = main_sheet.objects.all().filter(finish__icontains=query).order_by('-rg_date')
                 elif search_sort == 'user_dept':
                     m_sheet = main_sheet.objects.all().filter(user_dept__icontains=query).order_by('-rg_date')
                 elif search_sort == 'user_name':
@@ -340,8 +326,10 @@ def main_list(request):
                     v = []
                     for i in s_sheet:
                         sm = i.m_id_id
-                        ms = main_sheet.objects.filter(id__icontains=sm)
+                        print(sm)
+                        ms = main_sheet.objects.filter(id__iexact=sm)
                         v = v + list(ms)
+                    # 중복제거 / 정렬 작업을 위한 조건문
                     m_sheet = reduce(lambda acc, cur: acc if cur in acc else acc + [cur], v, [])
                 elif search_sort == 'rg_date':
                     e_date = datetime.datetime.strptime(enddate, '%Y-%m-%d') + datetime.timedelta(hours=23, minutes=59,
@@ -364,7 +352,7 @@ def main_list(request):
             over_date = main_sheet.objects.filter(rg_date__lte=date.today() - relativedelta(months=1)).exclude(
                 finish='종료').order_by('-rg_date')
 
-            # 페이징f
+            # 페이징
             page = request.GET.get('page', '1')
             paginator = Paginator(m_sheet, 10)
             page_obj = paginator.get_page(page)
@@ -424,8 +412,9 @@ def main_list(request):
                     v = []
                     for i in s_sheet:
                         sm = i.m_id_id
-                        ms = main_sheet.objects.filter(id__icontains=sm)
+                        ms = main_sheet.objects.filter(id__iexact=sm)
                         v = v + list(ms)
+                    # 중복제거 / 정렬 작업을 위한 조건문
                     m_sheet = reduce(lambda acc, cur: acc if cur in acc else acc + [cur], v, [])
                 elif search_sort == 'all':
                     m_sheet = main_sheet.objects.filter(Q(requests__icontains=query) | Q(finish__icontains=query) |
@@ -479,18 +468,13 @@ def sub_insert(request, pk):
 
         s_sheet.save()
 
-        if sub_sheet.objects.filter(m_id_id=pk):
-            sub = sub_sheet.objects.filter(m_id_id=pk).order_by('-rg_date')
-
         sub_total = sub_sheet.objects.filter(m_id_id=pk).distinct().values(
             'm_id_id').aggregate(Sum('total_price'))
         detailView.total_price = sub_total['total_price__sum']
         detailView.save()
 
-        # context = {'login_session': login_session, 'user_name': user_name, 'user_dept': user_dept, 'detailView': detailView,
-        #            'sub': sub}
         print('sub post 입력 종료')
-        # return render(request, 'isscm/main_detail.html', context)
+        # 중복 업로드 방지
         return HttpResponseRedirect(reverse('isscm:main_detail', args=[pk]))
 
 
@@ -510,6 +494,7 @@ def sub_modify(request, pk, mid):
         print("post sub detail 뷰 / 수정 시작")
         # 수정 내용 저장
         sub_detailView.product_name = request.POST['product_name']
+        # 숫자 , 제거 후 db 저장
         sub_detailView.per_price = request.POST.get('per_price').replace(",", "")
         sub_detailView.quantity = request.POST.get('quantity').replace(",", "")
         sub_detailView.tax = request.POST.get('tax').replace(",", "")
@@ -518,6 +503,7 @@ def sub_modify(request, pk, mid):
         print("수정 저장완료")
         sub_detailView.save()
 
+        # distinct()로 중복 제거 후 total_price 값 합계 구함
         sub_total = sub_sheet.objects.filter(m_id_id=mid).distinct().values(
             'm_id_id').aggregate(Sum('total_price'))
         detailView.total_price = sub_total['total_price__sum']
@@ -549,6 +535,7 @@ def sub_delete(request, pk, mid):
     sub = sub_sheet.objects.all().filter(m_id_id=mid).order_by('-rg_date')
     context = {'login_session': login_session, 'user_name': user_name,
                'user_dept': user_dept, 'sub': sub, 'detailView': detailView}
+    # 삭제 후 값 가지고 다시 돌아감
     return render(request, 'isscm/main_detail.html', context)
 
 
@@ -563,7 +550,9 @@ def main_excel_openpyxl(request):
     response["Content-Disposition"] = 'attachment; filename=' \
                                       + str(datetime.date.today()) + '_main.xlsx'
 
+    # 엑셀 오픈
     wb = openpyxl.Workbook()
+    # 엑셀 시트 활성화
     ws = wb.active
     ws.title = 'main'
 
@@ -599,7 +588,7 @@ def main_excel_openpyxl(request):
                 v = []
                 for i in s_sheet:
                     sm = i.m_id_id
-                    ms = main_sheet.objects.filter(id__icontains=sm)
+                    ms = main_sheet.objects.filter(id__exact=sm)
                     v = v + list(ms)
                 rows = reduce(lambda acc, cur: acc if cur in acc else acc + [cur], v, [])
             elif search_sort == 'all':
@@ -634,7 +623,7 @@ def main_excel_openpyxl(request):
                 v = []
                 for i in s_sheet:
                     sm = i.m_id_id
-                    ms = main_sheet.objects.filter(id__icontains=sm)
+                    ms = main_sheet.objects.filter(id__exact=sm)
                     v = v + list(ms)
                 rows = reduce(lambda acc, cur: acc if cur in acc else acc + [cur], v, [])
             elif search_sort == 'all':
@@ -667,8 +656,8 @@ def main_excel_openpyxl(request):
     for mainrow in rows:
         row_num += 1
 
-        # Define the data for each cell in the row
         row = [
+            # 날짜 포멧 변경
             mainrow.rg_date.strftime('%Y-%m-%d'),
             mainrow.rp_date,
             mainrow.end_date,
@@ -681,7 +670,6 @@ def main_excel_openpyxl(request):
             mainrow.user_name,
         ]
 
-        # Assign the data for each cell of the row
         for col_num, cell_value in enumerate(row, 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.value = cell_value
@@ -749,10 +737,8 @@ def sub_excel(request):
 
 # 메인 파일 업로드
 def main_uploadFile(request, pk):
-    print("오나요")
     login_session = request.session.get('login_session')
     user_name = request.session.get('user_name')
-    print("여기 오나요")
 
     if request.method == "POST":
         if request.FILES.get('uploadedFile') is not None:
@@ -797,13 +783,15 @@ def main_uploadFile(request, pk):
                                                               'detailView': detailView})
 
 
-# 파일 다운로드
+# 파일 다운로드 (바로보기가 아닌 다운로드를 위해서 만듬)
 def main_downloadfile(request, pk):
     upload_file = get_object_or_404(UploadFile, no=pk)
     file = upload_file.uploadedFile
     name = file.name
     response = HttpResponse(content_type=mimetypes.guess_type(name)[0] or 'application/octet-stream')
     response['Content-Disposition'] = f'attachment; filename={name}'
+
+    # copyfileobj : 파일 복사하여 다운로드 진행
     shutil.copyfileobj(file, response)
     return response
 
@@ -878,7 +866,7 @@ def product_list(request):
                     print('product_list : ', product_list)
                     for i in product_list:
                         sid = i['s_id']
-                        v = sub_sheet.objects.filter(id__icontains=sid).order_by('-rg_date')
+                        v = sub_sheet.objects.filter(id__exact=sid).order_by('-rg_date')
                         sub_list = sub_list + list(v)
                         print('sub_list : ', sub_list)
                 elif search_sort == 'all':
@@ -943,7 +931,7 @@ def product_list(request):
                     print('product_list : ', product_list)
                     for i in product_list:
                         sid = i['s_id']
-                        v = sub_sheet.objects.filter(id__icontains=sid).order_by('-rg_date')
+                        v = sub_sheet.objects.filter(id__exact=sid).order_by('-rg_date')
                         sub_list = sub_list + list(v)
                         print('sub_list : ', sub_list)
                         print(sub_list)
@@ -999,7 +987,8 @@ def product_modify(request, pk):
         print('get sub detail 뷰 시작')
 
         context = {'sub_detailView': sub_detailView, 'product_view': product_view, 'login_session': login_session,
-                   'user_name': user_name, 'user_dept': user_dept, 'sort': sort, 'query': query, 'search_sort': search_sort,
+                   'user_name': user_name, 'user_dept': user_dept, 'sort': sort, 'query': query,
+                   'search_sort': search_sort,
                    'sdate': startdate, 'edate': enddate, 'page': page}
         print("디테일 뷰 끝")
         return render(request, 'isscm/product_modify.html', context)
@@ -1014,6 +1003,7 @@ def product_modify(request, pk):
         product.release_date = request.POST['release_date']
         if request.POST['release_date'] != "":
             re_date = request.POST['release_date']
+            # 출고일로부터 3년 뒤 계산하여 DB 저장
             warranty = datetime.datetime.strptime(re_date, '%Y-%m-%d') + relativedelta(years=3)
         product.warranty = warranty
         product.s_id_id = pk
@@ -1022,7 +1012,6 @@ def product_modify(request, pk):
         try:
             ex_pm = Product_Management.objects.exclude(status='폐기')
             pm_modify = get_object_or_404(ex_pm, serial=request.POST['serial'])
-            # pm_modify = Product_Management()
             pm_modify.product_name = request.POST['product_name']
             pm_modify.current_location = request.POST['cname']
             pm_modify.status = "출고"
@@ -1059,7 +1048,7 @@ def product_delete(request, pk, sid):
 
     print('제품정보 삭제완료')
     return redirect(f'/product_modify/{sid}')
-    # return redirect('isscm:product_modify')
+
 
 # sub list 엑셀 다운로드
 def sub_list_excel_openpyxl(request):
@@ -1100,7 +1089,8 @@ def sub_list_excel_openpyxl(request):
                 print('product_list : ', product_list)
                 for i in product_list:
                     sid = i['s_id']
-                    v = sub_sheet.objects.all().filter(id__icontains=sid).order_by('-rg_date')
+                    # 정확한 숫자로 필터 거르기위해 exact 사용
+                    v = sub_sheet.objects.all().filter(id__exact=sid).order_by('-rg_date')
                     for w in v:
                         rows.append(w)
                 print('rows : ', rows)
@@ -1124,8 +1114,16 @@ def sub_list_excel_openpyxl(request):
                 rows = sub_sheet.objects.all().filter(product_name__icontains=query,
                                                       cname=login_session).order_by('-rg_date')
             elif search_sort == 'serial':
-                rows = sub_sheet.objects.all().filter(serial__icontains=query,
-                                                      cname=login_session).order_by('-rg_date')
+                rows = list()
+                product_list = product_info.objects.filter(serial__icontains=query, cname=login_session).values(
+                    's_id').distinct()
+                print('product_list : ', product_list)
+                for i in product_list:
+                    sid = i['s_id']
+                    # 정확한 숫자로 필터 거르기위해 exact 사용
+                    v = sub_sheet.objects.all().filter(id__exact=sid).order_by('-rg_date')
+                    for w in v:
+                        rows.append(w)
             elif search_sort == 'm_title':
                 rows = sub_sheet.objects.all().filter(m_title__icontains=query, cname=login_session).order_by(
                     '-rg_date')
@@ -1156,8 +1154,6 @@ def sub_list_excel_openpyxl(request):
 
     for sublistrow in rows:
         row_num += 1
-
-        # Define the data for each cell in the row
         row = [
             sublistrow.rg_date.strftime('%Y-%m-%d'),
             sublistrow.product_name,
@@ -1172,7 +1168,6 @@ def sub_list_excel_openpyxl(request):
             sublistrow.user_name
         ]
 
-        # Assign the data for each cell of the row
         for col_num, cell_value in enumerate(row, 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.value = cell_value
@@ -1207,7 +1202,6 @@ def product_info_excel(request):
     else:
         print('일반 다운로드')
         rows = product_info.objects.filter(s_id_id=sub_id, cname=login_session).order_by('-rg_date')
-    # 첫번째 열: 설정한 컬럼명 순서대로 스타일 적용하여 생성
     print("다운 중간2")
 
     row_num = 1
@@ -1218,7 +1212,6 @@ def product_info_excel(request):
     for plrow in rows:
         row_num += 1
 
-        # Define the data for each cell in the row
         row = [
             plrow.rg_date.strftime('%Y-%m-%d'),
             plrow.product_name,
@@ -1232,7 +1225,6 @@ def product_info_excel(request):
         ]
         print(row)
 
-        # Assign the data for each cell of the row
         for col_num, cell_value in enumerate(row, 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.value = cell_value
@@ -1266,6 +1258,35 @@ def product_db_insert(request):
         product.account_code = request.POST['account_code']
 
         product.save()
+        return HttpResponseRedirect(reverse('isscm:product_db_list'))
+
+
+# 제품명 db 수정
+def product_db_modify(request, pk):
+    login_session = request.session.get('login_session')
+    user_name = request.session.get('user_name')
+    user_dept = request.session.get('user_dept')
+    # 해당 하는 row가 있다면 가져오고 없다면 404에러 발생
+    detailview = get_object_or_404(ProductDb, no=pk)
+    if request.method == 'GET':
+        print('get 옴')
+        context = {'detailview': detailview, 'login_session': login_session, 'user_name': user_name,
+                   'user_dept': user_dept}
+        return render(request, 'isscm/product_db_modify.html', context)
+    else:
+        print('포스트')
+        detailview.center_code = request.POST['center_code']
+        detailview.center = request.POST['center']
+        detailview.warehouse_code = request.POST['warehouse_code']
+        detailview.warehouse_name = request.POST['warehouse_name']
+        detailview.product_code = request.POST['product_code']
+        detailview.product_num = request.POST['product_num']
+        detailview.scan_code = request.POST['scan_code']
+        detailview.product_name = request.POST['product_name']
+        detailview.account_code = request.POST['account_code']
+
+        detailview.save()
+        # 중복 db 저장 방지
         return HttpResponseRedirect(reverse('isscm:product_db_list'))
 
 
@@ -1540,18 +1561,13 @@ def pm_modify(request, pk):
     else:
         print("post sub detail 뷰 / 수정 시작")
         # 수정 내용 저장
-
         detailView.product_name = request.POST['product_name']
         detailView.serial = request.POST['serial']
         detailView.current_location = request.POST['current_location']
         detailView.status = request.POST['status']
 
         detailView.save()
-
         print("수정 저장 끝")
-        context = {'login_session': login_session, 'user_name': user_name,
-                   'user_dept': user_dept, 'detailView': detailView}
-        # return render(request, 'isscm/main_detail.html', context)
         return redirect('isscm:pm_list')
 
 
@@ -1561,7 +1577,6 @@ def pm_delete(request, pk):
 
     print('삭제완료')
     return redirect('isscm:pm_list')
-    # return redirect('isscm:product_modify')
 
 
 # product_manage 엑셀 다운로드 openpyxl 사용
@@ -1601,15 +1616,15 @@ def pm_excel_openpyxl(request):
         elif search_sort == 'rg_date':
             e_date = datetime.datetime.strptime(enddate, '%Y-%m-%d') + datetime.timedelta(hours=23, minutes=59,
                                                                                           seconds=59)
-            rows = Product_Management.objects.all().filter(rg_date__gte=startdate, rg_date__lte=e_date).order_by(
+            rows = Product_Management.objects.filter(rg_date__gte=startdate, rg_date__lte=e_date).order_by(
                 'rg_date')
         elif search_sort == 'update_date':
             d_date = datetime.datetime.strptime(enddate, '%Y-%m-%d') + datetime.timedelta(hours=23, minutes=59,
                                                                                           seconds=59)
-            rows = Product_Management.objects.all().filter(rg_date__gte=startdate, rg_date__lte=d_date).order_by(
+            rows = Product_Management.objects.filter(rg_date__gte=startdate, rg_date__lte=d_date).order_by(
                 'rg_date')
         elif search_sort == 'all':
-            rows = Product_Management.objects.all().filter(
+            rows = Product_Management.objects.filter(
                 Q(product_name__icontains=query) | Q(current_location__icontains=query) | Q(status__icontains=query)). \
                 order_by('rg_date')
         else:
@@ -1626,7 +1641,6 @@ def pm_excel_openpyxl(request):
     for asrow in rows:
         row_num += 1
 
-        # Define the data for each cell in the row
         row = [
             asrow.rg_date.strftime('%Y-%m-%d'),
             asrow.product_name,
@@ -1636,7 +1650,6 @@ def pm_excel_openpyxl(request):
             asrow.update_date.strftime('%Y-%m-%d')
         ]
 
-        # Assign the data for each cell of the row
         for col_num, cell_value in enumerate(row, 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.value = cell_value
@@ -1645,18 +1658,18 @@ def pm_excel_openpyxl(request):
     print("다운로드 끝")
     return response
 
+
 def pm_excel_upload(request):
     if request.method == "POST":
         print("엑셀 업로드 시작")
         try:
             files = request.FILES['uploadedFile']
-            print('file : ', files)
-            # data_only=Ture로 해줘야 수식이 아닌 값으로 받아온다.
-            load_wb = load_workbook(files, data_only=True)
-            print('loadwb : ', load_wb)
+            # data_only=True 수식이 아닌 값으로 읽어옴
+            load_wb = openpyxl.load_workbook(files, data_only=True)
             # 시트 이름으로 불러오기
-            load_ws = load_wb['Sheet1']
-            print('loadws :', load_ws)
+            # load_ws = load_wb['Sheet1']
+            # 첫번째 시트 불러오기 - 해당 방법 채택
+            load_ws = load_wb.worksheets[0]
             all_values = []
             for row in load_ws.rows:
                 row_value = []
@@ -1664,22 +1677,20 @@ def pm_excel_upload(request):
                     row_value.append(cell.value)
                 all_values.append(row_value)
 
-            print(all_values)
             for idx, val in enumerate(all_values):
                 print('저장 진행중')
+                # 첫번쩨(제목)줄 일때
                 if idx == 0:
                     print('val : ', val[0])
                     print('val : ', val[1])
                     print('val : ', val[2])
-                    # 엑셀 형식 체크 (첫번째의 제목 row)
-                    if val[0] != 'product_name' or val[1] != 'serial' or val[2] != 'current_location' or val[
-                        3] != 'status':
+                    # 엑셀 형식 체크 (첫번째의 제목 row) 제목 틀리면 안들어가고 빠져나옴
+                    if val[0] != 'product_name' or val[1] != 'serial' or val[2] != 'current_location' or val[3] != 'status':
                         print("항목 틀림")
                         break
                 else:
+                    # 한줄 전체가 공란이면 안들어가고 브레이크로 빠져나옴
                     if val[0] == None and val[1] == None and val[2] == None and val[3] == None:
-                        # te = Product_Management(no=val[0], rg_date=val[1], product_name=val[2], serial=val[3],
-                        #                                     current_location=val[4], status=val[5], update_date=val[6])
                         print("끝")
                         break
                     else:
@@ -1689,14 +1700,12 @@ def pm_excel_upload(request):
                         print('val2 : ', val[2])
                         print('val3 : ', val[3])
                         pm = Product_Management()
-                        # pm.no = val[0]
                         pm.product_name = val[0]
                         pm.serial = val[1]
                         pm.current_location = val[2]
                         pm.status = val[3]
 
                         pm.save()
-                        print(type(pm.product_name))
                         print('저장 완료')
         except:
             return redirect('isscm:pm_list')
